@@ -1,8 +1,10 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Http\Resources\Values as ValuesResource;
+
+use App\Http\Resources\Value as ValueResource;
 use App\Values;
+use App\Http\Resources\ValueCollection;
 
 use Illuminate\Http\Request;
 
@@ -20,9 +22,9 @@ class ValuesController extends Controller
             $key = $request->input('keys');
             $key = explode(',', $key);
             // dd($key);
-            return new ValuesResource(Values::all()->whereIn('key', $key));
+            return new ValueCollection(Values::all()->whereIn('key', $key));
         }else{
-            return new ValuesResource(Values::all());
+            return new ValueCollection(Values::all());
         }
         
     }
