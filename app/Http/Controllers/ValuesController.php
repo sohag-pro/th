@@ -84,6 +84,7 @@ class ValuesController extends Controller
         //adding all data in a array from request
 
         $new_values = array();
+        $check = 0;
         foreach ($request->except('_token') as $key => $part) {
 
             // checking if the key exist. Then we will return key exist
@@ -92,6 +93,7 @@ class ValuesController extends Controller
                 $response['warning'] = [
                     $key => "This Key exist! If you want to update, Please send a Patch Request.",
                 ];
+                $check++;
             }else{
 
                 // if the key is uniq, we will add that to database with the value
@@ -110,10 +112,17 @@ class ValuesController extends Controller
 
           //Now Check IF it saved Successfully
           if($saved){
-            $response['message'] = 'Data Saved Successfully.';
-            $response['link-all-data'] = '/api/values';
-            $response['status'] = 201;
-            return response($response, 201);
+            if($check){
+                $response['message'] = 'Some Data Can Not Be Saved Successfully. Please Check Warning Message. Rest of the Data Saved.';
+                $response['status'] = 202;
+            }else{
+                $response['message'] = 'Data Saved Successfully.';
+                $response['status'] = 201;
+            }
+            
+            $response['link-trail-all-data'] = '/api/values';
+            
+            return response($response, $response['status']);
           }else{
               //if something went wrong, return 500 server error
             $response['message'] = 'Something Went Wrong! in Server. Please try again!';
@@ -135,17 +144,19 @@ class ValuesController extends Controller
                         'updated_at' => now()
                     ]);
 
+            // in Case of error,
             if(!$patch){
                 $response['error'] = [
-                    $key => "Can't be Updated! Please Try Again."
+                    $key => "Can't be Updated! Please Try Again.",
+                    'Status' => 202
                 ];
             }
         }
 
         $response['message'] = 'Data Updated Successfully.';
-        $response['link-all-data'] = '/api/values';
-        $response['status'] = 204;
-        return response($response, 204);
+        $response['link-trail-all-data'] = '/api/values';
+        $response['status'] = 201;
+        return response($response, 201);
           
     }
 
