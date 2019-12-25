@@ -15,4 +15,5 @@ use Illuminate\Http\Request;
 */
 
 Route::get('/values', 'ValuesController@index');
-Route::get('/values/{key}', 'ValuesController@index');
+Route::post('/values', 'ValuesController@store');
+Route::patch('/values', 'ValuesController@update');

@@ -19,12 +19,23 @@ class ValuesController extends Controller
     {
         
         if ($request->has('keys')) {
+
             $key = $request->input('keys');
             $key = explode(',', $key);
             // dd($key);
-            return new ValueCollection(Values::all()->whereIn('key', $key));
+            $collection = new ValueCollection(Values::all()->whereIn('key', $key));
+            $plucked = $collection->pluck('value', 'key');
+
+            $plucked->all();
+            
+            return response($plucked, 200);
+
         }else{
-            return new ValueCollection(Values::all());
+
+            $collection = new ValueCollection(Values::all());
+            $plucked = $collection->pluck('value', 'key');
+            $plucked->all();
+            return response($plucked, 200);
         }
         
     }
@@ -47,7 +58,36 @@ class ValuesController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $arr = array();
+        foreach ($request->except('_token') as $key => $part) {
+
+            $duplicate = Values::where('key', '=', $key)->first();
+            if($duplicate){
+                $response['warning'] = [
+                    $key => "This Key exist! If you want to update, Please send a Patch Request.",
+                ];
+            }else{
+                $arr[] = [
+                    'key' => $key,
+                    'value' => $part,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+            }
+            
+          }
+
+          if(Values::insert($arr)){
+            $response['message'] = 'Data Saved Successfully.';
+            $response['link-all-data'] = '/api/values';
+            $response['status'] = 200;
+            return response($response, 200);
+          }else{
+            $response['message'] = 'Something Went Wrong!';
+            $response['status'] = 500;
+            return response($response, 500);
+          }
+        
     }
 
     /**
@@ -58,10 +98,7 @@ class ValuesController extends Controller
      */
     public function show()
     {
-        if ($request->has('keys')) {
-            $key = $request->input('keys');
-        }
-        return new ValuesResource(Values::firstOrFail()->where('key', $key));
+       //
     }
 
     /**
@@ -82,9 +119,27 @@ class ValuesController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request)
     {
-        //
+        $arr = array();
+        foreach ($request->except('_token') as $key => $part) {
+            $arr[] = [
+                'value' => $part,
+                'updated_at' => now()
+            ];
+
+            Values::where('key', $key)
+                    ->update([
+                        'value' => $part,
+                        'updated_at' => now()
+                    ]);
+          }
+
+        $response['message'] = 'Data Updated Successfully.';
+        $response['link-all-data'] = '/api/values';
+        $response['status'] = 200;
+        return response($response, 200);
+          
     }
 
     /**
