@@ -16,6 +16,15 @@ Create an API with the following endpoints to create a key-value store. The purp
 - POST /api/values
 - PATCH /api/values
 
+## Follow
+
+- Clone
+- composer install
+- php artisan key:generate
+- Create DB && Add to .env
+- php artisan migrate
+- php artisan serve
+
 
 ## License
 

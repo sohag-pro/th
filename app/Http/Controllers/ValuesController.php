@@ -81,83 +81,103 @@ class ValuesController extends Controller
     
     public function store(Request $request)
     {
-        //adding all data in a array from request
+        if(count($request->all())){
+            //adding all data in a array from request
+            $new_values = array();
+            $check = 0;
+            foreach ($request->except('_token') as $key => $part) {
 
-        $new_values = array();
-        $check = 0;
-        foreach ($request->except('_token') as $key => $part) {
+                // checking if the key exist. Then we will return key exist
+                $duplicate = Values::where('key', '=', $key)->first();
+                if($duplicate){
+                    $response['warning'] = [
+                        $key => "This Key exist! If you want to update, Please send a Patch Request.",
+                    ];
+                    $check++;
+                }else{
 
-            // checking if the key exist. Then we will return key exist
-            $duplicate = Values::where('key', '=', $key)->first();
-            if($duplicate){
-                $response['warning'] = [
-                    $key => "This Key exist! If you want to update, Please send a Patch Request.",
-                ];
-                $check++;
-            }else{
-
-                // if the key is uniq, we will add that to database with the value
-                $new_values[] = [
-                    'key' => $key,
-                    'value' => $part,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ];
+                    // if the key is uniq, we will add that to database with the value
+                    $new_values[] = [
+                        'key' => $key,
+                        'value' => $part,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+                
             }
-            
-          }
 
-          //insert into database
-          $saved = Values::insert($new_values);
+            //insert into database
+            $saved = Values::insert($new_values);
 
-          //Now Check IF it saved Successfully
-          if($saved){
-            if($check){
-                $response['message'] = 'Some Data Can Not Be Saved Successfully. Please Check Warning Message. Rest of the Data Saved.';
-                $response['status'] = 202;
+            //Now Check IF it saved Successfully
+            if($saved){
+                if($check){
+                    $response['message'] = 'Some Data Can Not Be Saved Successfully. Please Check Warning Message. Rest of the Data Saved.';
+                    $response['status'] = 202;
+                }else{
+                    $response['message'] = 'Data Saved Successfully.';
+                    $response['status'] = 201;
+                }
+                
+                $response['link-trail-all-data'] = '/api/values';
+                
+                return response($response, $response['status']);
             }else{
-                $response['message'] = 'Data Saved Successfully.';
-                $response['status'] = 201;
+                //if something went wrong, return 500 server error
+                $response['message'] = 'Something Went Wrong! in Server. Please try again!';
+                $response['status'] = 500;
+                return response($response, 500);
             }
-            
+        }else{
+            $response['message'] = 'Empty POST request! Nothing Created.';
             $response['link-trail-all-data'] = '/api/values';
-            
-            return response($response, $response['status']);
-          }else{
-              //if something went wrong, return 500 server error
-            $response['message'] = 'Something Went Wrong! in Server. Please try again!';
-            $response['status'] = 500;
-            return response($response, 500);
-          }
-        
+            $response['status'] = 400;
+            return response($response, 400);
+        }
     }
 
    // Patch Function
     public function update(Request $request)
     {
-        //Go through all key and Update the value
-        foreach ($request->except('_token') as $key => $part) {
+        if(count($request->all())){
+            $check = 0;
+            //Go through all key and Update the value
+            foreach ($request->except('_token') as $key => $part) {
 
-            $patch = Values::where('key', $key)
-                    ->update([
-                        'value' => $part,
-                        'updated_at' => now()
-                    ]);
+                $patch = Values::where('key', $key)
+                        ->update([
+                            'value' => $part,
+                            'updated_at' => now()
+                        ]);
 
-            // in Case of error,
-            if(!$patch){
-                $response['error'] = [
-                    $key => "Can't be Updated! Please Try Again.",
-                    'Status' => 202
-                ];
+                // in Case of error,
+                if(!$patch){
+                    $response['error'] = [
+                        $key => "Key is not created yet. Please Try a POST Request to create new entry.",
+                    ];
+                    $check++;
+                }
             }
-        }
 
-        $response['message'] = 'Data Updated Successfully.';
-        $response['link-trail-all-data'] = '/api/values';
-        $response['status'] = 201;
-        return response($response, 201);
-          
+            if($check){
+                $response['message'] = 'Some Data  cannot be updated. Please check error message';
+                $response['status'] = 400;
+            }else{
+                $response['message'] = 'Data Updated Successfully.';
+                $response['status'] = 201;
+            }
+
+            
+            $response['link-trail-all-data'] = '/api/values';
+            
+            return response($response, $response['status']);
+        }else{
+            $response['message'] = 'Empty PATCH requested! Nothing Updated.';
+            $response['link-trail-all-data'] = '/api/values';
+            $response['status'] = 400;
+            return response($response, 400);
+        }
     }
 
     // TTL Delete Function
