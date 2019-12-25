@@ -7,14 +7,11 @@ use App\Values;
 use App\Http\Resources\ValueCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ValuesController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
+    
     public function index(Request $request)
     {
         $this->destroy();
@@ -28,13 +25,20 @@ class ValuesController extends Controller
             $key = explode(',', $key);
             // Getting All data related to the keys(s)
 
-            $collection = new ValueCollection(Values::all()->whereIn('key', $key));
+            //Get all data
+            $values = Values::all()->whereIn('key', $key);
+            // dd($values);
+            //Make Collection
+            $collection = new ValueCollection($values);
+            
             // checking if the collection is not empty
             if(!$collection->isEmpty()){
 
-                //as the collection is not empty, return data
-                $plucked = $collection->pluck('value', 'key');
+                // now Update time Stamp for the keys
+                $values->each->update(array('updated_at' => now()));
 
+                //as the collection is not empty, return formatted data
+                $plucked = $collection->pluck('value', 'key');
                 $plucked->all();
 
                 $response['data'] = $plucked;
@@ -55,27 +59,31 @@ class ValuesController extends Controller
             //if there is no Query String, Return All Data
 
             $collection = new ValueCollection(Values::all());
-            $plucked = $collection->pluck('value', 'key');
-            $plucked->all();
-            $response['data'] = $plucked;
-            $response['status'] = 200;
+
+            if(!$collection->isEmpty()){
+                $plucked = $collection->pluck('value', 'key');
+                $plucked->all();
+                $response['data'] = $plucked;
+                $response['status'] = 200;
+                
+                return response($response, 200);
+            }else{
+                //if the collection is empty return 404
+                $response['message'] = 'No Data Found! Try Adding Some Data.';
+                $response['status'] = 205;
+                return response($response, 205);
+            }
             
-            return response($response, 200);
         }
         
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
+    
     public function store(Request $request)
     {
         //adding all data in a array from request
 
-        $arr = array();
+        $new_values = array();
         foreach ($request->except('_token') as $key => $part) {
 
             // checking if the key exist. Then we will return key exist
@@ -87,7 +95,7 @@ class ValuesController extends Controller
             }else{
 
                 // if the key is uniq, we will add that to database with the value
-                $arr[] = [
+                $new_values[] = [
                     'key' => $key,
                     'value' => $part,
                     'created_at' => now(),
@@ -98,14 +106,14 @@ class ValuesController extends Controller
           }
 
           //insert into database
-          $saved = Values::insert($arr);
+          $saved = Values::insert($new_values);
 
           //Now Check IF it saved Successfully
           if($saved){
             $response['message'] = 'Data Saved Successfully.';
             $response['link-all-data'] = '/api/values';
-            $response['status'] = 200;
-            return response($response, 200);
+            $response['status'] = 201;
+            return response($response, 201);
           }else{
               //if something went wrong, return 500 server error
             $response['message'] = 'Something Went Wrong! in Server. Please try again!';
@@ -115,54 +123,56 @@ class ValuesController extends Controller
         
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+   // Patch Function
     public function update(Request $request)
     {
-        $arr = array();
+        //Go through all key and Update the value
         foreach ($request->except('_token') as $key => $part) {
-            $arr[] = [
-                'value' => $part,
-                'updated_at' => now()
-            ];
 
-            Values::where('key', $key)
+            $patch = Values::where('key', $key)
                     ->update([
                         'value' => $part,
                         'updated_at' => now()
                     ]);
-          }
+
+            if(!$patch){
+                $response['error'] = [
+                    $key => "Can't be Updated! Please Try Again."
+                ];
+            }
+        }
 
         $response['message'] = 'Data Updated Successfully.';
         $response['link-all-data'] = '/api/values';
-        $response['status'] = 200;
-        return response($response, 200);
+        $response['status'] = 204;
+        return response($response, 204);
           
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+    // TTL Delete Function
     public function destroy()
     {
+        //Get All Values
         $values = Values::all();
+
+        //Set Current Timestamp
         $now_timestamp = Carbon::now()->timestamp;
+
+        //Go through All values
         foreach ($values as $value){ 
-            //Geeting Updated at time
+            //Geeting Updated time
             $updated_at = $value->updated_at->timestamp;
+
+            // Taking Difference Between now and Updated Time
             $diff = ($now_timestamp - $updated_at) / 60;
 
+            //If Updated Time is More Than 5 Minuite, Delete
             if($diff > 5){
                 Values::find($value->id)->delete();
             }
-          }
+        }
+
+        // Now Update the rest of the data updated Time to now. Uncomment Below Line to Update the Timestamp on every get request.
+        // DB::table('values')->update(array('updated_at' => now()));
     }
 }
