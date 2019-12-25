@@ -17,37 +17,51 @@ class ValuesController extends Controller
      */
     public function index(Request $request)
     {
-        
+        // First Check IF Query String given
         if ($request->has('keys')) {
 
+            //getting Query String
             $key = $request->input('keys');
-            $key = explode(',', $key);
-            // dd($key);
-            $collection = new ValueCollection(Values::all()->whereIn('key', $key));
-            $plucked = $collection->pluck('value', 'key');
 
-            $plucked->all();
+            //Making Query String an array
+            $key = explode(',', $key);
+            // Getting All data related to the keys(s)
+
+            $collection = new ValueCollection(Values::all()->whereIn('key', $key));
+            // checking if the collection is not empty
+            if(!$collection->isEmpty()){
+
+                //as the collection is not empty, return data
+                $plucked = $collection->pluck('value', 'key');
+
+                $plucked->all();
+
+                $response['data'] = $plucked;
+                $response['status'] = 200;
+                
+                return response($response, 200);
+            }else{
+
+                //if the collection is empty return 404
+                $response['message'] = 'No Related Data Found! Please Check Spelling. Remember that, Keys are case sensitive.';
+                $response['status'] = 404;
+                return response($response, 404);
+            }
             
-            return response($plucked, 200);
 
         }else{
+
+            //if there is no Query String, Return All Data
 
             $collection = new ValueCollection(Values::all());
             $plucked = $collection->pluck('value', 'key');
             $plucked->all();
-            return response($plucked, 200);
+            $response['data'] = $plucked;
+            $response['status'] = 200;
+            
+            return response($response, 200);
         }
         
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
     }
 
     /**
@@ -58,15 +72,20 @@ class ValuesController extends Controller
      */
     public function store(Request $request)
     {
+        //adding all data in a array from request
+
         $arr = array();
         foreach ($request->except('_token') as $key => $part) {
 
+            // checking if the key exist. Then we will return key exist
             $duplicate = Values::where('key', '=', $key)->first();
             if($duplicate){
                 $response['warning'] = [
                     $key => "This Key exist! If you want to update, Please send a Patch Request.",
                 ];
             }else{
+
+                // if the key is uniq, we will add that to database with the value
                 $arr[] = [
                     'key' => $key,
                     'value' => $part,
@@ -77,39 +96,22 @@ class ValuesController extends Controller
             
           }
 
-          if(Values::insert($arr)){
+          //insert into database
+          $saved = Values::insert($arr);
+
+          //Now Check IF it saved Successfully
+          if($saved){
             $response['message'] = 'Data Saved Successfully.';
             $response['link-all-data'] = '/api/values';
             $response['status'] = 200;
             return response($response, 200);
           }else{
-            $response['message'] = 'Something Went Wrong!';
+              //if something went wrong, return 500 server error
+            $response['message'] = 'Something Went Wrong! in Server. Please try again!';
             $response['status'] = 500;
             return response($response, 500);
           }
         
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show()
-    {
-       //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
     }
 
     /**
