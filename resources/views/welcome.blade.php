@@ -58,6 +58,12 @@
                 text-transform: uppercase;
             }
 
+            ul, li {
+                list-style-type: none;
+                font-weight: bold;
+                text-align: left;
+            }
+
             .m-b-md {
                 margin-bottom: 30px;
             }
@@ -86,7 +92,14 @@
 
                 <div class="links">
                     REST API
+                    
                 </div>
+                <ul>
+                    <li>GET /api/values</li>
+                    <li>GET /api/values?keys=key1,key2</li>
+                    <li>POST /api/values</li>
+                    <li>PATCH /api/values</li>
+                </ul>
             </div>
         </div>
     </body>
