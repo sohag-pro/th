@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\Value as ValueResource;
 use App\Values;
 use App\Http\Resources\ValueCollection;
-
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 
 class ValuesController extends Controller
@@ -17,6 +17,7 @@ class ValuesController extends Controller
      */
     public function index(Request $request)
     {
+        $this->destroy();
         // First Check IF Query String given
         if ($request->has('keys')) {
 
@@ -150,8 +151,18 @@ class ValuesController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy()
     {
-        //
+        $values = Values::all();
+        $now_timestamp = Carbon::now()->timestamp;
+        foreach ($values as $value){ 
+            //Geeting Updated at time
+            $updated_at = $value->updated_at->timestamp;
+            $diff = ($now_timestamp - $updated_at) / 60;
+
+            if($diff > 5){
+                Values::find($value->id)->delete();
+            }
+          }
     }
 }
